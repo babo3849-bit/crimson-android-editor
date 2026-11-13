@@ -44,6 +44,7 @@ jobs:
         run: |
           sed -i 's/#\[no_mangle\]/#[unsafe(no_mangle)]/g' native/src/lib.rs
           sed -i 's/BTreeMap<(u32, u32, u32)/BTreeMap<(u32, u32, u64)/g' native/src/lib.rs
+          sed -i 's/BTreeMap::<(u32,u32,u32)/BTreeMap::<(u32,u32,u64)/g' native/src/lib.rs
       - name: Build JNI bridge for Android ARM64
         working-directory: native
         env:
