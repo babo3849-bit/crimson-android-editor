@@ -40,6 +40,10 @@ jobs:
           cd engine
           python3 ../scripts/patch_engine.py
           cargo ndk -t arm64-v8a -o ../app/src/main/jniLibs build --release --features c_abi
+      - name: Patch Rust bridge for current Rust compiler
+        run: |
+          sed -i 's/#\[no_mangle\]/#[unsafe(no_mangle)]/g' native/src/lib.rs
+          sed -i 's/BTreeMap<(u32, u32, u32)/BTreeMap<(u32, u32, u64)/g' native/src/lib.rs
       - name: Build JNI bridge for Android ARM64
         working-directory: native
         env:
