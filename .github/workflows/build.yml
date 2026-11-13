@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'crimson-android-editor.zip'
+      - 'ui/MainActivity.kt'
       - '.github/workflows/build.yml'
 jobs:
   build:
@@ -14,6 +15,7 @@ jobs:
         run: |
           unzip -q crimson-android-editor.zip
           cp -a crimson-android-editor/. .
+          cp ui/MainActivity.kt app/src/main/java/com/crimson/editor/MainActivity.kt
       - name: Align Android Java and Kotlin bytecode targets
         run: |
           f=$(find app -maxdepth 2 -type f \( -name 'build.gradle' -o -name 'build.gradle.kts' \) | head -n 1)
