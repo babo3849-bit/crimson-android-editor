@@ -31,16 +31,17 @@ class MainActivity : Activity() {
     private var inputFile: File? = null
     private var pendingOutputFile: File? = null
     private var allItems = JSONArray()
-    private val bg = 0xFF101418.toInt()
-    private val panel = 0xFF1B232B.toInt()
-    private val gold = 0xFFFFC66D.toInt()
-    private val white = 0xFFF1F4F7.toInt()
-    private val muted = 0xFFADB8C2.toInt()
+    private val bg = 0xFF090907.toInt()
+    private val panel = 0xFF11110F.toInt()
+    private val gold = 0xFFC7A76A.toInt()
+    private val white = 0xFFE9E5DC.toInt()
+    private val muted = 0xFF969188.toInt()
+    private val line = 0xFF302D27.toInt()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(18,18,18,12); setBackgroundColor(bg) }
-        val title = TextView(this).apply { text = "⚔  CRIMSON DESERT\\nSAVE INVENTORY"; textSize = 23f; setTextColor(gold); gravity = Gravity.CENTER; setPadding(8,12,8,18) }
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0,0,0,0); setBackgroundColor(bg) }
+        val title = TextView(this).apply { text = "CRIMSON DESERT  ·  INVENTAR"; textSize = 17f; setTextColor(gold); gravity = Gravity.CENTER_VERTICAL; setPadding(18,18,18,16) }
         val open = Button(this).apply { text = "📂  SAVE-DATEI ÖFFNEN"; setOnClickListener { pickSave() } }
         status = TextView(this).apply { text = "Noch keine Save-Datei geöffnet"; setTextColor(muted); textSize = 13f; setPadding(4,10,4,8) }
         summary = TextView(this).apply { text = "📦  INVENTARÜBERSICHT\\nÖffne zuerst deine Save-Datei."; setTextColor(white); textSize = 15f; setPadding(14,14,14,14); setBackgroundColor(panel) }
@@ -127,19 +128,56 @@ class MainActivity : Activity() {
             3 -> compareBy<JSONObject> { it.optInt("inventoryKey") }.thenBy { it.optInt("container") }.thenBy { it.optInt("slotNo") }
             else -> compareByDescending<JSONObject> { it.optLong("stackCount",1L) }
         })
-        if (rows.isEmpty()) { preview.addView(TextView(this@MainActivity).apply { text = "Keine passenden Einträge gefunden."; setTextColor(muted); setPadding(12,20,12,20) }); return }
+        if (rows.isEmpty()) {
+            preview.addView(TextView(this@MainActivity).apply { text = "Keine passenden Einträge gefunden."; setTextColor(muted); setPadding(18,24,18,24) })
+            return
+        }
         rows.forEach { item ->
-            val count = item.optLong("stackCount",1L)
-            val card = LinearLayout(this@MainActivity).apply {
-                orientation = LinearLayout.VERTICAL; setPadding(14,12,14,12); setBackgroundColor(panel); isClickable = true; isFocusable = true
-                setOnClickListener { itemNoInput.setText(item.optLong("itemNo").toString()); status.text = "✓ Item-Nr. ${item.optLong("itemNo")} ausgewählt. Vor dem Export bitte prüfen." }
+            val count = item.optLong("stackCount",1L).coerceAtLeast(1L)
+            val number = item.optLong("itemNo")
+            val row = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(18,12,16,12)
+                setBackgroundColor(bg)
+                isClickable = true
+                isFocusable = true
+                setOnClickListener {
+                    itemNoInput.setText(number.toString())
+                    status.text = "✓ Item-Nr. $number ausgewählt. Vor dem Export bitte prüfen."
+                }
             }
-            card.addView(TextView(this@MainActivity).apply { text = "${if (count > 1) "📚" else "⚔️"}  Item-Nr. ${item.optLong("itemNo")}     ×$count"; textSize = 17f; setTextColor(gold) })
-            card.addView(TextView(this@MainActivity).apply { text = "🔑 Schlüssel: ${item.optLong("itemKey")}\\n🎒 Inventar: ${item.optInt("inventoryKey")}   •   Container: ${item.optInt("container")}\\n📍 Slot: ${item.optInt("slotNo")}"; textSize = 12f; setTextColor(white); setPadding(0,6,0,0) })
-            preview.addView(card, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 7 })
+            val iconTile = TextView(this@MainActivity).apply {
+                text = "✦"
+                textSize = 27f
+                gravity = Gravity.CENTER
+                setTextColor(gold)
+                setBackgroundColor(panel)
+            }
+            row.addView(iconTile, LinearLayout.LayoutParams(64.dp,64.dp).apply { rightMargin = 16.dp })
+            val labels = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL }
+            labels.addView(TextView(this@MainActivity).apply {
+                text = "Item $number"
+                textSize = 17f
+                setTextColor(white)
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                maxLines = 1
+            })
+            val meta = "ID $number   ·   Stückzahl $count   ·   Slot ${item.optInt("slotNo")}"
+            labels.addView(TextView(this@MainActivity).apply {
+                text = meta
+                textSize = 13f
+                setTextColor(muted)
+                setPadding(0,5,0,0)
+                maxLines = 1
+            })
+            row.addView(labels, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT,1f))
+            preview.addView(row, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
+            preview.addView(View(this@MainActivity).apply { setBackgroundColor(line) }, LinearLayout.LayoutParams(-1,1))
         }
         status.text = "${rows.size} von ${allItems.length()} Einträgen angezeigt."
     }
+    private val Int.dp: Int get() = (this * resources.displayMetrics.density).toInt()
     private fun exportCleanedCopy(destination: Uri) {
         val source = inputFile ?: return; val target = pendingOutputFile ?: return
         val key = getPreferences(MODE_PRIVATE).getLong("pending_item_no",-1L)
