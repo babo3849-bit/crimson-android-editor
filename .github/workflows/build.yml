@@ -16,7 +16,9 @@ jobs:
           unzip -q crimson-android-editor.zip
           cp -a crimson-android-editor/. .
           cp ui/MainActivity.kt app/src/main/java/com/crimson/editor/MainActivity.kt
-      - name: Integrate community item-name database\n        run: python3 scripts/integrate_item_database.py\n      - name: Align Android Java and Kotlin bytecode targets
+      - name: Integrate community item-name database
+        run: python3 scripts/integrate_item_database.py
+      - name: Align Android Java and Kotlin bytecode targets
         run: |
           f=$(find app -maxdepth 2 -type f \( -name 'build.gradle' -o -name 'build.gradle.kts' \) | head -n 1)
           test -n "$f"
