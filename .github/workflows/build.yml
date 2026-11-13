@@ -1,0 +1,51 @@
+name: Build Crimson Desert Android APK
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'crimson-android-editor.zip'
+      - '.github/workflows/build.yml'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract project
+        run: |
+          unzip -q crimson-android-editor.zip
+          cp -a crimson-android-editor/. .
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK components
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27c
+      - uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: '8.11.1'
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked
+      - name: Build upstream Rust engine for Android ARM64
+        run: |
+          git clone https://github.com/bbfox0703/crimson-rs engine
+          cd engine
+          python3 ../scripts/patch_engine.py
+          cargo ndk -t arm64-v8a -o ../app/src/main/jniLibs build --release --features c_abi
+      - name: Build JNI bridge for Android ARM64
+        working-directory: native
+        env:
+          CRIMSON_ENGINE_LIB_DIR: ${{ github.workspace }}/app/src/main/jniLibs/arm64-v8a
+        run: cargo ndk -t arm64-v8a -o ../app/src/main/jniLibs build --release
+      - name: Build APK
+        run: gradle --no-daemon :app:assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CrimsonSaveInspector-arm64-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
