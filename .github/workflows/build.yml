@@ -49,3 +49,4 @@ jobs:
         with:
           name: CrimsonSaveInspector-arm64-debug
           path: app/build/outputs/apk/debug/app-debug.apk
+
