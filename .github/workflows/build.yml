@@ -6,6 +6,7 @@ on:
       - 'crimson-android-editor.zip'
       - 'ui/MainActivity.kt'
       - '.github/workflows/build.yml'
+      - 'scripts/integrate_item_database.py'
 jobs:
   build:
     runs-on: ubuntu-latest
