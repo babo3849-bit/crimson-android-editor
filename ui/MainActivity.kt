@@ -19,6 +19,8 @@ import android.text.TextWatcher
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MainActivity : Activity() {
     private lateinit var status: TextView
@@ -31,6 +33,10 @@ class MainActivity : Activity() {
     private var inputFile: File? = null
     private var pendingOutputFile: File? = null
     private var allItems = JSONArray()
+    private val itemNames = mutableMapOf<Long, String>()
+    private val itemInternalNames = mutableMapOf<Long, String>()
+    private val itemCategories = mutableMapOf<Long, String>()
+    private val itemMaxStacks = mutableMapOf<Long, Long>()
     private val bg = 0xFF090907.toInt()
     private val panel = 0xFF11110F.toInt()
     private val gold = 0xFFC7A76A.toInt()
@@ -68,6 +74,7 @@ class MainActivity : Activity() {
         root.addView(itemNoInput, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         root.addView(exportButton, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT))
         setContentView(root)
+        loadCommunityDatabase()
         searchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { renderItems() }
@@ -157,13 +164,18 @@ class MainActivity : Activity() {
             row.addView(iconTile, LinearLayout.LayoutParams(64.dp,64.dp).apply { rightMargin = 16.dp })
             val labels = LinearLayout(this@MainActivity).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL }
             labels.addView(TextView(this@MainActivity).apply {
-                text = "Item $number"
+                text = itemNames[item.optLong("itemKey", number)] ?: "Item $number"
                 textSize = 17f
                 setTextColor(white)
                 typeface = android.graphics.Typeface.DEFAULT_BOLD
                 maxLines = 1
             })
-            val meta = "ID $number   ·   Stückzahl $count   ·   Slot ${item.optInt("slotNo")}"
+            val itemKey = item.optLong("itemKey", number)
+            val maxStack = itemMaxStacks[itemKey]
+            val warning = if (maxStack != null && count > maxStack) " ⚠ Max. $maxStack" else ""
+            val category = itemCategories[itemKey] ?: "Unbekannt"
+            val internal = itemInternalNames[itemKey] ?: ""
+            val meta = "ID $number · Key $itemKey · Stückzahl $count$warning · Slot ${item.optInt("slotNo")}\n$category · $internal"
             labels.addView(TextView(this@MainActivity).apply {
                 text = meta
                 textSize = 13f
@@ -178,6 +190,31 @@ class MainActivity : Activity() {
         status.text = "${rows.size} von ${allItems.length()} Einträgen angezeigt."
     }
     private val Int.dp: Int get() = (this * resources.displayMetrics.density).toInt()
+    private fun loadCommunityDatabase() {
+        Thread {
+            try {
+                val connection = URL("https://raw.githubusercontent.com/NattKh/CrimsonDesertCommunityItemMapping/main/item_names.json").openConnection() as HttpURLConnection
+                connection.connectTimeout = 15000
+                connection.readTimeout = 25000
+                val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                connection.disconnect()
+                val entries = root.optJSONArray("items") ?: JSONArray()
+                for (i in 0 until entries.length()) {
+                    val entry = entries.optJSONObject(i) ?: continue
+                    val key = entry.optLong("itemKey", -1L)
+                    if (key < 0L) continue
+                    itemNames[key] = entry.optString("name", "Item $key")
+                    itemInternalNames[key] = entry.optString("internalName", "")
+                    itemCategories[key] = entry.optString("category", "Sonstiges")
+                    val max = entry.optLong("maxStack", -1L)
+                    if (max > 0L) itemMaxStacks[key] = max
+                }
+                runOnUiThread { if (::status.isInitialized) { status.text = "Item-Datenbank geladen: ${itemNames.size} Namen"; renderItems() } }
+            } catch (_: Exception) {
+                runOnUiThread { if (::status.isInitialized) status.text = "Item-Datenbank offline – Item-IDs werden angezeigt." }
+            }
+        }.start()
+    }
     private fun exportCleanedCopy(destination: Uri) {
         val source = inputFile ?: return; val target = pendingOutputFile ?: return
         val key = getPreferences(MODE_PRIVATE).getLong("pending_item_no",-1L)
