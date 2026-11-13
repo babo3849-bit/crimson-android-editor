@@ -81,6 +81,8 @@ jobs:
         env:
           CRIMSON_ENGINE_LIB_DIR: ${{ github.workspace }}/app/src/main/jniLibs/arm64-v8a
         run: cargo ndk -t arm64-v8a -o ../app/src/main/jniLibs build --release
+      - name: Fix Android view context
+        run: sed -i 's/TextView(this)/TextView(this@MainActivity)/' app/src/main/java/com/crimson/editor/MainActivity.kt
       - name: Build APK
         run: gradle --no-daemon :app:assembleDebug
       - uses: actions/upload-artifact@v4
