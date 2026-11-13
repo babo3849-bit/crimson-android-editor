@@ -14,6 +14,37 @@ jobs:
         run: |
           unzip -q crimson-android-editor.zip
           cp -a crimson-android-editor/. .
+      - name: Align Android Java and Kotlin bytecode targets
+        run: |
+          f=$(find app -maxdepth 2 -type f \( -name 'build.gradle' -o -name 'build.gradle.kts' \) | head -n 1)
+          test -n "$f"
+          if [[ "$f" == *.kts ]]; then
+            cat >> "$f" <<'EOF'
+          
+          android {
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+          }
+          EOF
+          else
+            cat >> "$f" <<'EOF'
+          
+          android {
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+              kotlinOptions {
+                  jvmTarget '17'
+              }
+          }
+          EOF
+          fi
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
