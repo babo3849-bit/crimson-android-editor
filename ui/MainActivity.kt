@@ -44,7 +44,7 @@ class MainActivity : Activity() {
         val title = TextView(this).apply { text = "CRIMSON DESERT  ·  INVENTAR"; textSize = 17f; setTextColor(gold); gravity = Gravity.CENTER_VERTICAL; setPadding(18,18,18,16) }
         val open = Button(this).apply { text = "📂  SAVE-DATEI ÖFFNEN"; setOnClickListener { pickSave() } }
         status = TextView(this).apply { text = "Noch keine Save-Datei geöffnet"; setTextColor(muted); textSize = 13f; setPadding(4,10,4,8) }
-        summary = TextView(this).apply { text = "📦  INVENTARÜBERSICHT\\nÖffne zuerst deine Save-Datei."; setTextColor(white); textSize = 15f; setPadding(14,14,14,14); setBackgroundColor(panel) }
+        summary = TextView(this).apply { text = "📦  INVENTARÜBERSICHT\nÖffne zuerst deine Save-Datei."; setTextColor(white); textSize = 15f; setPadding(14,14,14,14); setBackgroundColor(panel) }
         searchInput = EditText(this).apply { hint = "🔎  Nach Item-Nr. oder Schlüssel suchen"; setSingleLine(true); setTextColor(white); setHintTextColor(muted); isEnabled = false }
         sortSpinner = Spinner(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, listOf("Sortieren: Stückzahl ↓","Sortieren: Stückzahl ↑","Sortieren: Item-Nr.","Sortieren: Inventar / Slot"))
@@ -109,7 +109,7 @@ class MainActivity : Activity() {
             allItems = response.optJSONArray("items") ?: JSONArray()
             val totalStacks = (0 until allItems.length()).sumOf { allItems.getJSONObject(it).optLong("stackCount",1L).coerceAtLeast(1L) }
             val uniqueItems = (0 until allItems.length()).map { allItems.getJSONObject(it).optLong("itemNo") }.distinct().size
-            summary.text = "📦  INVENTARÜBERSICHT\\n${response.optInt("count")} Einträge   •   $uniqueItems verschiedene Item-Nr.\\n🔢  Gesamt-Stückzahl (Stackwerte): $totalStacks"
+            summary.text = "📦  INVENTARÜBERSICHT\n${response.optInt("count")} Einträge   •   $uniqueItems verschiedene Item-Nr.\n🔢  Gesamt-Stückzahl (Stackwerte): $totalStacks"
             searchInput.isEnabled = true; sortSpinner.isEnabled = true; itemNoInput.isEnabled = true; exportButton.isEnabled = true
             status.text = "Save erfolgreich gelesen. Du kannst suchen und sortieren."
             renderItems()
@@ -186,10 +186,10 @@ class MainActivity : Activity() {
             val response = JSONObject(NativeBridge.removeDuplicates(source.absolutePath,target.absolutePath,key))
             if (!response.optBoolean("ok")) error(response.optString("error","Bearbeitung fehlgeschlagen"))
             contentResolver.openOutputStream(destination,"w")?.use { out -> target.inputStream().use { it.copyTo(out) } } ?: error("Zieldatei konnte nicht geschrieben werden")
-            summary.text = "✅  KOPIE ERFOLGREICH ERSTELLT\\nEntfernt: ${response.optInt("removed")} Duplikate\\nBehalten: ${response.optInt("keptEntries")} Einträge\\nNachprüfung: ${response.optInt("verifiedInventoryCount")} Inventar-Einträge"
+            summary.text = "✅  KOPIE ERFOLGREICH ERSTELLT\nEntfernt: ${response.optInt("removed")} Duplikate\nBehalten: ${response.optInt("keptEntries")} Einträge\nNachprüfung: ${response.optInt("verifiedInventoryCount")} Inventar-Einträge"
             status.text = "Fertig. Das Original wurde nicht verändert."
             preview.removeAllViews()
-            preview.addView(TextView(this@MainActivity).apply { text = "Die bereinigte Datei wurde exportiert und erneut eingelesen.\\nItem-Nr.: ${response.optLong("itemNo")}\\nContainer mit Duplikaten: ${response.optInt("containersWithDuplicates")}"; setTextColor(white); setPadding(12,16,12,16) })
+            preview.addView(TextView(this@MainActivity).apply { text = "Die bereinigte Datei wurde exportiert und erneut eingelesen.\nItem-Nr.: ${response.optLong("itemNo")}\nContainer mit Duplikaten: ${response.optInt("containersWithDuplicates")}"; setTextColor(white); setPadding(12,16,12,16) })
         } catch (e: Exception) { status.text = "Export abgebrochen: ${e.message}" }
     }
     companion object { private const val REQUEST_OPEN = 410; private const val REQUEST_CREATE = 411 }
