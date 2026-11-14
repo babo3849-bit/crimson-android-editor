@@ -276,3 +276,4 @@ class MainActivity : Activity() {
     }
     companion object { private const val REQUEST_OPEN = 410; private const val REQUEST_CREATE = 411 }
 }
+// Build trigger: rebuild current Android save-inspector source.
