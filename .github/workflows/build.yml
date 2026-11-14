@@ -18,8 +18,7 @@ jobs:
           unzip -q crimson-android-editor.zip
           cp -a crimson-android-editor/. .
           cp ui/MainActivity.kt app/src/main/java/com/crimson/editor/MainActivity.kt
-      - name: Add verified stack-count editing
-        run: python3 scripts/patch_stack_verification.py
+          unzip -oq patches/quantity-overlay.zip -d .
       - name: Integrate community item-name database
         run: python3 scripts/integrate_item_database.py
       - name: Align Android Java and Kotlin bytecode targets
