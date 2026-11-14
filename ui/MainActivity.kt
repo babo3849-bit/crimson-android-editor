@@ -191,29 +191,74 @@ class MainActivity : Activity() {
     }
     private val Int.dp: Int get() = (this * resources.displayMetrics.density).toInt()
     private fun loadCommunityDatabase() {
-        Thread {
+        // Load the last known database immediately so names remain available offline.
+        val cache = File(filesDir, "item_names.json")
+        if (cache.exists()) {
             try {
-                val connection = URL("https://raw.githubusercontent.com/NattKh/CrimsonDesertCommunityItemMapping/main/item_names.json").openConnection() as HttpURLConnection
-                connection.connectTimeout = 15000
-                connection.readTimeout = 25000
-                val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-                connection.disconnect()
-                val entries = root.optJSONArray("items") ?: JSONArray()
-                for (i in 0 until entries.length()) {
-                    val entry = entries.optJSONObject(i) ?: continue
-                    val key = entry.optLong("itemKey", -1L)
-                    if (key < 0L) continue
-                    itemNames[key] = entry.optString("name", "Item $key")
-                    itemInternalNames[key] = entry.optString("internalName", "")
-                    itemCategories[key] = entry.optString("category", "Sonstiges")
-                    val max = entry.optLong("maxStack", -1L)
-                    if (max > 0L) itemMaxStacks[key] = max
-                }
-                runOnUiThread { if (::status.isInitialized) { status.text = "Item-Datenbank geladen: ${itemNames.size} Namen"; renderItems() } }
+                applyCommunityDatabase(cache.readText())
+                status.text = "Offline-Item-Datenbank geladen: ${itemNames.size} Einträge"
+                renderItems()
             } catch (_: Exception) {
-                runOnUiThread { if (::status.isInitialized) status.text = "Item-Datenbank offline – Item-IDs werden angezeigt." }
+                status.text = "Gespeicherte Item-Datenbank konnte nicht gelesen werden."
+            }
+        } else {
+            status.text = "Lade Item-Datenbank …"
+        }
+
+        // Refresh in the background. A failed connection never removes the offline copy.
+        Thread {
+            var connection: HttpURLConnection? = null
+            try {
+                connection = (URL("https://raw.githubusercontent.com/NattKh/CrimsonDesertCommunityItemMapping/main/item_names.json").openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 15000
+                    readTimeout = 25000
+                    requestMethod = "GET"
+                    setRequestProperty("User-Agent", "CrimsonAndroidEditor")
+                }
+                if (connection.responseCode !in 200..299) error("HTTP ${connection.responseCode}")
+                val json = connection.inputStream.bufferedReader().use { it.readText() }
+                // Validate before replacing the cache.
+                JSONObject(json)
+                cache.writeText(json)
+                runOnUiThread {
+                    applyCommunityDatabase(json)
+                    if (::status.isInitialized) {
+                        status.text = "Item-Datenbank aktualisiert: ${itemNames.size} Einträge"
+                        renderItems()
+                    }
+                }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    if (::status.isInitialized && itemNames.isEmpty()) {
+                        status.text = "Offline: Item-IDs werden angezeigt; Datenbank noch nicht geladen."
+                    } else if (::status.isInitialized) {
+                        status.text = "Offline-Modus – gespeicherte Item-Datenbank wird verwendet."
+                    }
+                }
+            } finally {
+                connection?.disconnect()
             }
         }.start()
+    }
+
+    private fun applyCommunityDatabase(json: String) {
+        val root = JSONObject(json)
+        val entries = root.optJSONArray("items") ?: JSONArray()
+        itemNames.clear()
+        itemInternalNames.clear()
+        itemCategories.clear()
+        itemMaxStacks.clear()
+        for (i in 0 until entries.length()) {
+            val entry = entries.optJSONObject(i) ?: continue
+            val key = entry.optLong("itemKey", -1L)
+            if (key < 0L) continue
+            val name = entry.optString("name").takeIf { it.isNotBlank() } ?: "Item $key"
+            itemNames[key] = name
+            itemInternalNames[key] = entry.optString("internalName", "")
+            itemCategories[key] = entry.optString("category", "Sonstiges")
+            val max = entry.optLong("maxStack", -1L)
+            if (max > 0L) itemMaxStacks[key] = max
+        }
     }
     private fun exportCleanedCopy(destination: Uri) {
         val source = inputFile ?: return; val target = pendingOutputFile ?: return
